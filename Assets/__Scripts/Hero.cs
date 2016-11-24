@@ -14,10 +14,12 @@ public class Hero : MonoBehaviour {
     public float shieldLevel = 1;
 
     public bool ____________________________;
+    public Bounds bounds;
 
     void Awake()
     {
         S = this; //Set the Singleton
+        bounds = Utils.CombineBoundsOfChildren(this.gameObject);
     }
     void Update ()
     {
@@ -31,7 +33,54 @@ public class Hero : MonoBehaviour {
         pos.y += yAxis * speed * Time.deltaTime;
         transform.position = pos;
 
+        bounds.center = transform.position; //1
+
+        //Keep the ship constrained to the screen bounds
+        Vector3 off = Utils.ScreenBoundsCheck(bounds, BoundsTest.onScreen); //2
+        if(off != Vector3.zero) //3
+        {
+            pos -= off;
+            transform.position = pos;
+        }
+
         //Rotate the ship to make it feel more dynamic  //2
         transform.rotation = Quaternion.Euler(yAxis * pitchMult, xAxis * rollMult, 0);
+    }
+
+    //This variable holds a refernce to the last triggering GameObject
+    public GameObject lastTriggerGo = null;   //1
+
+    void OnTriggerEnter(Collider other)
+    {
+        //Find the tag of other.gameObject or its parent GameObjects
+        GameObject go = Utils.FindTaggedParent(other.gameObject);
+        //If there is a parent with a tag
+        if(go != null)
+        {
+            //Make sure it's not the same triggering go as last time
+            if(go == lastTriggerGo) //2
+            {
+                return;
+            }
+            lastTriggerGo = go; //3
+
+            if(go.tag == "Enemy")
+            {
+                //If the shield was triggered by an enemy
+                //Decrease the level of the shield by 1
+                shieldLevel--;
+                //Destroy the enemy
+                Destroy(go);    //4
+            }
+            else
+            {
+                print("Triggered: " + go.name); //moved line
+            }
+        }
+        else
+        {
+            //Otherwise announce the original other.gameObject
+            print("Triggered: " + other.gameObject.name); //Test line moved
+        }
     }
 }
